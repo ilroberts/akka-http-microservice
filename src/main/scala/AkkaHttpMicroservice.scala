@@ -1,10 +1,10 @@
 import akka.actor.ActorSystem
-import akka.event.{LoggingAdapter, Logging}
+import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.model.{HttpResponse, HttpRequest}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.unmarshalling.Unmarshal
@@ -13,9 +13,12 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import java.io.IOException
+
+import akka.http.scaladsl.server.Route
+
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.math._
-import spray.json.DefaultJsonProtocol
+import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 case class IpInfo(query: String, country: Option[String], city: Option[String], lat: Option[Double], lon: Option[Double])
 
@@ -45,9 +48,9 @@ object IpPairSummary {
 }
 
 trait Protocols extends DefaultJsonProtocol {
-  implicit val ipInfoFormat = jsonFormat5(IpInfo.apply)
-  implicit val ipPairSummaryRequestFormat = jsonFormat2(IpPairSummaryRequest.apply)
-  implicit val ipPairSummaryFormat = jsonFormat3(IpPairSummary.apply)
+  implicit val ipInfoFormat: RootJsonFormat[IpInfo] = jsonFormat5(IpInfo.apply)
+  implicit val ipPairSummaryRequestFormat: RootJsonFormat[IpPairSummaryRequest] = jsonFormat2(IpPairSummaryRequest.apply)
+  implicit val ipPairSummaryFormat: RootJsonFormat[IpPairSummary] = jsonFormat3(IpPairSummary.apply)
 }
 
 trait Service extends Protocols {
@@ -77,7 +80,7 @@ trait Service extends Protocols {
     }
   }
 
-  val routes = {
+  val routes: Route = {
     logRequestResult("akka-http-microservice") {
       pathPrefix("ip") {
         (get & path(Segment)) { ip =>
